@@ -3,6 +3,9 @@ package socks5
 import (
 	"fmt"
 	"io"
+	"context"
+	"layeh.com/radius"
+	. "layeh.com/radius/rfc2865"
 )
 
 const (
@@ -47,17 +50,16 @@ func (a NoAuthAuthenticator) Authenticate(reader io.Reader, writer io.Writer) (*
 	return &AuthContext{NoAuth, nil}, err
 }
 
-// UserPassAuthenticator is used to handle username/password based
-// authentication
-type UserPassAuthenticator struct {
-	Credentials CredentialStore
+// Radius auth
+type RadiusAuthenticator struct {
+	Radius RadiusServer
 }
 
-func (a UserPassAuthenticator) GetCode() uint8 {
+func (a RadiusAuthenticator) GetCode() uint8 {
 	return UserPassAuth
 }
 
-func (a UserPassAuthenticator) Authenticate(reader io.Reader, writer io.Writer) (*AuthContext, error) {
+func (a RadiusAuthenticator) Authenticate(reader io.Reader, writer io.Writer) (*AuthContext, error) {
 	// Tell the client to use user/pass auth
 	if _, err := writer.Write([]byte{socks5Version, UserPassAuth}); err != nil {
 		return nil, err
@@ -94,7 +96,15 @@ func (a UserPassAuthenticator) Authenticate(reader io.Reader, writer io.Writer) 
 	}
 
 	// Verify the password
-	if a.Credentials.Valid(string(user), string(pass)) {
+	packet := radius.New(radius.CodeAccessRequest, []byte(a.Radius.getSecret()))
+	UserName_SetString(packet, string(user))
+	UserPassword_SetString(packet, string(pass))
+	response, err := radius.Exchange(context.Background(), packet, a.Radius.getServer())
+	if err != nil {
+		panic(err)
+	}
+
+	if response.Code == radius.CodeAccessAccept {
 		if _, err := writer.Write([]byte{userAuthVersion, authSuccess}); err != nil {
 			return nil, err
 		}

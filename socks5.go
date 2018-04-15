@@ -21,14 +21,12 @@ type Config struct {
 	// For password-based auth use UserPassAuthenticator.
 	AuthMethods []Authenticator
 
-	// If provided, username/password authentication is enabled,
-	// by appending a UserPassAuthenticator to AuthMethods. If not provided,
-	// and AUthMethods is nil, then "auth-less" mode is enabled.
-	Credentials CredentialStore
-
 	// Resolver can be provided to do custom name resolution.
 	// Defaults to DNSResolver if not provided.
 	Resolver NameResolver
+
+	// Somehow this should work, but i need to figure it out
+	Radius RadiusServer
 
 	// Rules is provided to enable custom logic around permitting
 	// various commands. If not provided, PermitAll is used.
@@ -61,8 +59,8 @@ type Server struct {
 func New(conf *Config) (*Server, error) {
 	// Ensure we have at least one authentication method enabled
 	if len(conf.AuthMethods) == 0 {
-		if conf.Credentials != nil {
-			conf.AuthMethods = []Authenticator{&UserPassAuthenticator{conf.Credentials}}
+		if conf.Radius != nil {
+			conf.AuthMethods = []Authenticator{&RadiusAuthenticator{conf.Radius}}
 		} else {
 			conf.AuthMethods = []Authenticator{&NoAuthAuthenticator{}}
 		}

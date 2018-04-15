@@ -1,28 +1,15 @@
-go-socks5 [![Build Status](https://travis-ci.org/armon/go-socks5.png)](https://travis-ci.org/armon/go-socks5)
-=========
+go-socks5-radius
+================
 
 Provides the `socks5` package that implements a [SOCKS5 server](http://en.wikipedia.org/wiki/SOCKS).
 SOCKS (Secure Sockets) is used to route traffic between a client and server through
 an intermediate proxy layer. This can be used to bypass firewalls or NATs.
 
-Feature
-=======
+Attention
+=========
 
-The package has the following features:
-* "No Auth" mode
-* User/Password authentication
-* Support for the CONNECT command
-* Rules to do granular filtering of commands
-* Custom DNS resolution
-* Unit tests
-
-TODO
-====
-
-The package still needs the following:
-* Support for the BIND command
-* Support for the ASSOCIATE command
-
+This is a fork of [go-socks5](https://github.com/armon/go-socks5) that uses RADIUS server instead of in-app algorithm.
+Use it at your own risk. I haven't tested it in various environments but it works for me. Low code quality included.
 
 Example
 =======
@@ -30,16 +17,23 @@ Example
 Below is a simple example of usage
 
 ```go
-// Create a SOCKS5 server
-conf := &socks5.Config{}
-server, err := socks5.New(conf)
-if err != nil {
-  panic(err)
-}
+	rad := socks5.RadiusCfg{
+		Server: "radius.example.com:1812",
+		Secret: "radiusSecret",
+	}
+	cator := socks5.RadiusAuthenticator{Radius: rad}
+	conf := &socks5.Config{
+		AuthMethods: []socks5.Authenticator{cator},
+		Logger:      log.New(os.Stdout, "", log.LstdFlags),
+	}
+	server, err := socks5.New(conf)
+	if err != nil {
+		panic(err)
+	}
 
-// Create SOCKS5 proxy on localhost port 8000
-if err := server.ListenAndServe("tcp", "127.0.0.1:8000"); err != nil {
-  panic(err)
-}
+	// Create SOCKS5 proxy on localhost port 8000
+	if err := server.ListenAndServe("tcp", "0.0.0.0:1080"); err != nil {
+		panic(err)
+	}
 ```
 
